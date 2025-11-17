@@ -1,0 +1,6 @@
+ultralytics
+requests>=2.27.1
+numpy>=1.14.0
+Pillow>=5.2.0
+opencv-python>=4.5.5.64
+tensorflow>=1.9.0
