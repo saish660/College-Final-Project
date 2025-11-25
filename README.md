@@ -1,6 +1,5 @@
 # AI Based System for Automated Classroom Management
 
-# Using the project
 
 ## Setting up
 
