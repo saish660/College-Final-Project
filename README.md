@@ -6,7 +6,7 @@
 - `pip install -r requirements.txt`
 - On your phone, install [IP Camera for Android](https://play.google.com/store/apps/details?id=com.pas.webcam) or any other IP camera app of your choice.
 - Connect your phone and machine to the same wifi network.
-- Type the IP address of your IP camera in the variables of both scripts.
+- Start your IP camera and  type the IP address of your IP camera in the variables of both scripts.
 
 ## Creating Zones
 
