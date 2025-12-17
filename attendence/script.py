@@ -12,7 +12,25 @@ from insightface.utils import face_align
 # ------------------------------
 # Config
 # ------------------------------
-IP_CAMERA_VIDEO_URL = "http://10.226.246.96:8080/video"
+IP_CAM_URL_FILE = "../ip_camera_url.txt"
+
+
+def load_ip_cam_url(path=IP_CAM_URL_FILE):
+    """Load IP camera URL from a text file; exit if missing/empty."""
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            url = f.read().strip()
+        if not url:
+            raise ValueError("IP camera URL file is empty")
+        return url
+    except Exception as e:
+        print(f"❌ Could not load IP camera URL from {path}:", e)
+        raise SystemExit(1)
+
+
+IP_CAMERA_VIDEO_URL = load_ip_cam_url()
+
+
 STUDENTS_DIR = "students"
 FRAMES_PER_TRIGGER = 5           # capture 3–5 frames per button press
 MIN_FACE_SIZE = 40               # px (bare-minimum gate)

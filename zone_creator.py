@@ -11,7 +11,7 @@ import json
 # ------------------------------
 # CONFIG
 # ------------------------------
-IP_CAMERA_URL = "http://10.152.211.115:8080/video"
+IP_CAMERA_URL = "http://10.226.246.96:8080/video"
 
 zones = []
 current_zone = []

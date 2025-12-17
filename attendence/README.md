@@ -1,8 +1,8 @@
-# YOLO Human Detection (person)
+# Attendance Capture (Face Recognition)
 
-This script uses the `ultralytics` YOLO package to detect humans (COCO class "person").
+This script captures frames from the IP camera feed, runs InsightFace for detection/embeddings, and tries to match faces against the `students/` gallery.
 
-Requirements
+## Requirements
 - Python 3.8+
 - Install dependencies:
 
@@ -10,27 +10,18 @@ Requirements
 pip install -r requirements.txt
 ```
 
-Basic usage
+## Setup
+- Set your IP camera stream URL in `../ip_camera_url.txt` (one line, e.g., `http://<ip>:<port>/video`). The script reads from this file; no code edits needed.
+- Populate `students/<student_name>/` folders with reference face images (one or more per student). Images should contain a clear, frontal face.
 
-Run webcam (default model `yolov8n.pt`):
-
-```powershell
-python script.py --source 0 --show
-```
-
-Run a video file and save output:
+## Run
 
 ```powershell
-python script.py --source path\to\video.mp4 --output out.mp4 --show
+python script.py
 ```
 
-Run a folder of images:
+The script grabs a small burst of frames from the camera, extracts faces, and matches them to the gallery. Console logs report which student matched (if any) along with basic quality info.
 
-```powershell
-python script.py --source c:\path\to\images\ --output out.mp4 --show
-```
-
-Notes
-- The script filters detections to only the `person` class.
-- Press `q` in the display window to stop early.
-- If you use a model name like `yolov8n.pt`, the ultralytics package will download it automatically on first use.
+## Notes
+- Uses GPU if available (`CUDAExecutionProvider`), otherwise CPU.
+- Basic quality gates (blur, face size, pose) are enabled by default; tune thresholds in the config section of `script.py` if needed.

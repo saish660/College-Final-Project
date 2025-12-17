@@ -14,6 +14,24 @@ from queue import Queue
 # For COCO-trained YOLO models, person class id is usually 0.
 ALLOWED_CLASSES = [0]   # change if your model uses a different id for "person"
 
+IP_CAM_URL_FILE = "ip_camera_url.txt"
+
+
+def load_ip_cam_url(path=IP_CAM_URL_FILE):
+    """Load IP camera URL from a text file; exit if missing/empty."""
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            url = f.read().strip()
+        if not url:
+            raise ValueError("IP camera URL file is empty")
+        return url
+    except Exception as e:
+        print(f"❌ Could not load IP camera URL from {path}:", e)
+        raise SystemExit(1)
+
+
+IP_CAM_URL = load_ip_cam_url()
+
 # Optional: enable some debug printing to verify class ids seen
 DEBUG_PRINT_CLASSES_SEEN = True
 _seen_class_ids = set()
@@ -36,7 +54,6 @@ except Exception:
 # =======================
 # CONFIG
 # =======================
-IP_CAM_URL = "http://10.152.211.115:8080/video"
 
 # If you have exported an OpenVINO model (xml), set path here.
 # Example: "yolov9e_openvino_model/model.xml"
@@ -377,7 +394,6 @@ threading.Thread(target=yolo_worker, daemon=True).start()
 # Window / loop
 # =======================
 cv2.namedWindow("Zone-Based Human Detection", cv2.WINDOW_NORMAL)
-cv2.setWindowProperty("Zone-Based Human Detection", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 screen = cv2.getWindowImageRect("Zone-Based Human Detection")
 sw, sh = screen[2], screen[3]
 
@@ -430,7 +446,6 @@ try:
             cx = int(np.mean(poly[:,0])); cy = int(np.mean(poly[:,1]))
             cv2.putText(annotated, z["name"], (cx-40, cy), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
 
-        annotated = cv2.resize(annotated, (sw, sh))
         cv2.imshow("Zone-Based Human Detection", annotated)
         print(zone_occupancy)
 

@@ -6,7 +6,7 @@
 - `pip install -r requirements.txt`
 - On your phone, install [IP Camera for Android](https://play.google.com/store/apps/details?id=com.pas.webcam) or any other IP camera app of your choice.
 - Connect your phone and machine to the same wifi network.
-- Start your IP camera and  type the IP address of your IP camera in the variables of both scripts.
+- Start your IP camera and place its stream URL in `ip_camera_url.txt` (one line, e.g., `http://<ip>:<port>/video`). The scripts now read the URL from this file—no hardcoded changes needed.
 
 ## Creating Zones
 
@@ -19,12 +19,12 @@ The window might not close and stop responding. Terminate the script from the te
 
 ## Detection System
 
-- Execute the `yolo_detection.py` script in the terminal, this will open a new window with the video stream from your ip camera with human detection into zones.
+- Execute the `yolo_detection.py` script in the terminal; it will open a window with the IP camera stream and show human detections within zones.
 
 ```
-Wait for the yolo model to download when you execute the script the first time.
+Wait for the YOLO model to download when you execute the script the first time.
 ```
 
 - Any zone that has humans in it will turn green.
-- For a human to be in a zone, the center of the bounding box of the detected human should be in the zone.
-- To stop the program, terminate the python script running in the terminal.
+- A human counts as in a zone when the center of their bounding box is inside that zone polygon.
+- To stop the program, terminate the Python script running in the terminal.

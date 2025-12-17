@@ -1,1 +1,4 @@
 *.pt
+venv/
+zones.json
+*.python-version
