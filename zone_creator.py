@@ -11,7 +11,23 @@ import json
 # ------------------------------
 # CONFIG
 # ------------------------------
-IP_CAMERA_URL = "http://10.226.246.96:8080/video"
+IP_CAM_URL_FILE = "ip_camera_url.txt"
+
+
+def load_ip_cam_url(path=IP_CAM_URL_FILE):
+    """Load IP camera URL from a text file; exit if missing/empty."""
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            url = f.read().strip()
+        if not url:
+            raise ValueError("IP camera URL file is empty")
+        return url
+    except Exception as e:
+        print(f"❌ Could not load IP camera URL from {path}:", e)
+        raise SystemExit(1)
+
+
+IP_CAMERA_URL = load_ip_cam_url()
 
 zones = []
 current_zone = []
