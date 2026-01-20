@@ -2,3 +2,5 @@
 venv/
 zones.json
 *.python-version
+__pycache__/
+*.db

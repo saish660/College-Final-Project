@@ -1,6 +1,0 @@
-ultralytics
-opencv-python
-numpy
-onnxruntime
-insightface
-faiss-cpu
