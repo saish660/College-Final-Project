@@ -3,16 +3,16 @@ import cv2
 import math
 import time
 import numpy as np
+from pathlib import Path
 from typing import Dict, List, Tuple
 
 import insightface
 from insightface.app import FaceAnalysis
 from insightface.utils import face_align
 
-# ------------------------------
-# Config
-# ------------------------------
-IP_CAM_URL_FILE = "../ip_camera_url.txt"
+
+BASE_DIR = Path(__file__).resolve().parent
+IP_CAM_URL_FILE = BASE_DIR / "ip_camera_url.txt"
 
 
 def load_ip_cam_url(path=IP_CAM_URL_FILE):
@@ -69,13 +69,13 @@ def build_face_app() -> FaceAnalysis:
 
 def capture_frames(cap: cv2.VideoCapture, num_frames: int) -> List[np.ndarray]:
     frames = []
-    for _ in range(num_frames):
+    for i in range(num_frames):
         ok, frame = cap.read()
         if ok and frame is not None:
             frames.append(frame)
-            print(f"📸 Captured frame {len(frames)}/{num_frames}")
+            print(f"CAPTURED FRAME: {i+1}/{num_frames}")
         else:
-            print("⚠️  Failed to read frame from camera")
+            print("Failed to read frame from camera")
         time.sleep(0.02)
     return frames
 
