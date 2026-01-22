@@ -163,21 +163,32 @@ def _run_script_or_error(script_path: Path, args: list[str]):
             ["python3", str(script_path), *args],
             check=True,
             cwd=script_path.parent,
-            stdout=sys.stdout,
-            stderr=sys.stderr,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
         )
+        if result.stdout:
+            print(result.stdout, end="", flush=True)
+        if result.stderr:
+            print(result.stderr, end="", file=sys.stderr, flush=True)
+        return {
+            "message": "Script executed successfully",
+            "output": result.stdout,
+        }
     except subprocess.CalledProcessError as exc:
+        if exc.stdout:
+            print(exc.stdout, end="", flush=True)
+        if exc.stderr:
+            print(exc.stderr, end="", file=sys.stderr, flush=True)
         raise HTTPException(
             status_code=500,
             detail={
                 "error": "Script execution failed",
                 "returncode": exc.returncode,
+                "stdout": exc.stdout,
+                "stderr": exc.stderr,
             },
         )
-
-    return {
-        "message": "Script executed (output streamed to server log)",
-    }
 
 
 def _stop_light_process():
@@ -230,8 +241,9 @@ def _start_light_process(script_path: Path, args: list[str]):
 # ---------------------------
 @app.post("/attendance/process")
 def run_attendance_ai(req: schemas.AttendanceScriptTrigger):
-    script_path = _resolve_script_path(req.script_path, ATTENDANCE_SCRIPT_PATH)
-    script_path = _ensure_script_exists(script_path, "Attendance")
+    # Resolve and validate script path in one step
+    resolved_path = _resolve_script_path(req.script_path, ATTENDANCE_SCRIPT_PATH)
+    script_path = _ensure_script_exists(resolved_path, "Attendance")
     args = req.arguments or []
 
     return _run_script_or_error(script_path, args)
