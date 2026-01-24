@@ -160,7 +160,7 @@ def _resolve_script_path(req_path: str | None, default_path: Path) -> Path:
 def _run_script_or_error(script_path: Path, args: list[str]):
     try:
         result = subprocess.run(
-            ["python3", str(script_path), *args],
+            [sys.executable, str(script_path), *args],
             check=True,
             cwd=script_path.parent,
             stdout=subprocess.PIPE,
@@ -215,7 +215,7 @@ def _start_light_process(script_path: Path, args: list[str]):
     work_dir = script_path.parent
 
     light_process = subprocess.Popen(
-        ["python3", str(script_path), *args],
+        [sys.executable, str(script_path), *args],
         stdout=sys.stdout,
         stderr=sys.stderr,
         cwd=work_dir,

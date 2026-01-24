@@ -24,7 +24,7 @@ def load_ip_cam_url(path=IP_CAM_URL_FILE):
             raise ValueError("IP camera URL file is empty")
         return url
     except Exception as e:
-        print(f"❌ Could not load IP camera URL from {path}:", e)
+        print(f"ERROR: Could not load IP camera URL from {path}:", e)
         raise SystemExit(1)
 
 
@@ -60,10 +60,10 @@ def build_face_app() -> FaceAnalysis:
             app = FaceAnalysis(name="buffalo_l", providers=[provider])
             ctx_id = 0 if provider == "CUDAExecutionProvider" else -1
             app.prepare(ctx_id=ctx_id)
-            print(f"✅ FaceAnalysis ready with provider={provider}")
+            print(f"READY: FaceAnalysis ready with provider={provider}")
             return app
         except Exception as exc:  # noqa: BLE001
-            print(f"⚠️  Failed to load provider {provider}: {exc}")
+            print(f"WARNING: Failed to load provider {provider}: {exc}")
     raise RuntimeError("No valid onnxruntime provider available")
 
 
@@ -145,7 +145,7 @@ def load_student_db(app: FaceAnalysis) -> Dict[str, List[np.ndarray]]:
                 continue
             faces = app.get(img)
             if len(faces) == 0:
-                print(f"⚠️  No face found for {student} in {fname}")
+                print(f"ERROR: No face found for {student} in {fname}")
                 continue
             face = faces[0]
             emb = face.normed_embedding.astype("float32")
@@ -233,10 +233,10 @@ def run_once(app: FaceAnalysis, student_db: Dict[str, List[np.ndarray]]) -> None
                 info["quality_ok"] = ok
                 if not ok:
                     if STRICT_QUALITY:
-                        print(f"⚠️  Rejected by quality: {info}")
+                        print(f"WARNING: Rejected by quality: {info}")
                         continue
                     else:
-                        print(f"ℹ️  Quality fail but keeping (STRICT_QUALITY=False): {info}")
+                        print(f"WARNING: Quality fail but keeping (STRICT_QUALITY=False): {info}")
             else:
                 # Collect metrics but do not gate
                 bbox = face.bbox.astype(int)
@@ -260,7 +260,7 @@ def run_once(app: FaceAnalysis, student_db: Dict[str, List[np.ndarray]]) -> None
             })
 
     if not candidates:
-        print("❌ No faces passed detection/quality")
+        print("ERROR: No faces passed detection/quality")
         return
 
     clusters = cluster_candidates(candidates, SAME_FACE_MERGE_THRESHOLD)
@@ -276,11 +276,11 @@ def run_once(app: FaceAnalysis, student_db: Dict[str, List[np.ndarray]]) -> None
             attendance[matched] = {"max_sim": meta["max_sim"], "samples": len(embs)}
 
     if not attendance:
-        print("❌ No matches across detected faces")
+        print("ERROR: No matches across detected faces")
         return
 
     for name, meta in attendance.items():
-        print(f"✔ Marking attendance for {name} (max_sim={meta['max_sim']:.3f}, samples={meta['samples']})")
+        print(f"SUCCESS: Marking attendance for {name} (max_sim={meta['max_sim']:.3f}, samples={meta['samples']})")
 
 
 if __name__ == "__main__":
