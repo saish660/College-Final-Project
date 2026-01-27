@@ -4,4 +4,4 @@ zones.json
 *.python-version
 __pycache__/
 *.db
-processing/ip_camera_url.txt
+ip_camera_url.txt
