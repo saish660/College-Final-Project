@@ -4,7 +4,9 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from fastapi import FastAPI, Depends, HTTPException
+from typing import List
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, Request, Response
+from fastapi.responses import HTMLResponse, FileResponse
 from sqlalchemy.orm import Session
 from database import SessionLocal, engine
 import models, schemas, auth
@@ -23,6 +25,9 @@ PROJECT_ROOT = Path(__file__).resolve().parent  # smart_classroom_backend
 PROCESSING_DIR = PROJECT_ROOT / "processing"
 ATTENDANCE_SCRIPT_PATH = PROCESSING_DIR / "mark_attendance.py"
 LIGHT_SCRIPT_PATH = PROCESSING_DIR / "yolo_detection.py"
+ZONE_CREATOR_SCRIPT_PATH = PROCESSING_DIR / "zone_creator.py"
+ADMIN_PAGE_PATH = PROJECT_ROOT / "static" / "admin.html"
+ZONE_CREATOR_SCRIPT_PATH = PROCESSING_DIR / "zone_creator.py"
 
 # Database dependency
 def get_db():
@@ -31,6 +36,66 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def require_admin(request: Request, db: Session = Depends(get_db)):
+    """Guard that ensures an admin cookie is present and valid."""
+    email = request.cookies.get("admin_email")
+    if not email:
+        raise HTTPException(status_code=401, detail="Admin login required")
+
+    admin = db.query(models.Admin).filter(models.Admin.email == email).first()
+    if not admin:
+        raise HTTPException(status_code=401, detail="Admin not found")
+
+    return admin
+
+# ---------------------------
+# ADMIN AUTH
+# ---------------------------
+@app.post("/admin/create")
+def create_admin(data: schemas.AdminCreate, db: Session = Depends(get_db)):
+    existing_admin = db.query(models.Admin).filter(models.Admin.email == data.email).first()
+    if existing_admin:
+        return {"error": "Admin already exists"}
+
+    admin = models.Admin(
+        name=data.name,
+        email=data.email,
+        password=auth.hash_password(data.password),
+    )
+    db.add(admin)
+    db.commit()
+    return {"message": "Admin created successfully"}
+
+
+@app.post("/admin/login")
+def admin_login(data: schemas.AdminLogin, response: Response, db: Session = Depends(get_db)):
+    admin = db.query(models.Admin).filter(models.Admin.email == data.email).first()
+
+    if not admin or not auth.verify_password(data.password, admin.password):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    response.set_cookie(
+        key="admin_email",
+        value=admin.email,
+        httponly=True,
+        samesite="lax",
+        max_age=7200,
+    )
+    return {"message": "Logged in"}
+
+
+@app.post("/admin/logout")
+def admin_logout(response: Response):
+    response.delete_cookie("admin_email")
+    return {"message": "Logged out"}
+
+
+@app.get("/admin/me")
+def admin_me(admin=Depends(require_admin)):
+    return {"email": admin.email, "name": admin.name}
+
 
 # ---------------------------
 # CREATE TEACHER API
@@ -264,3 +329,59 @@ def toggle_lights(req: schemas.LightToggle):
 
     state = _stop_light_process()
     return {"lights_on": False, "process": state}
+
+
+# ---------------------------
+# ADMIN PANEL (UI + ACTIONS)
+# ---------------------------
+@app.get("/", response_class=FileResponse)
+@app.get("/admin", response_class=FileResponse)
+def admin_page():
+    if not ADMIN_PAGE_PATH.is_file():
+        raise HTTPException(status_code=500, detail="Admin page is missing")
+    return FileResponse(ADMIN_PAGE_PATH, media_type="text/html")
+
+
+@app.post("/admin/zones/create")
+def trigger_zone_creator(admin=Depends(require_admin)):
+    script_path = _ensure_script_exists(ZONE_CREATOR_SCRIPT_PATH, "Zone creator")
+    return _run_script_or_error(script_path, [])
+
+
+@app.post("/admin/students/upload")
+async def upload_student_images(
+    student_folder: str = Form(...),
+    files: List[UploadFile] = File(...),
+    admin=Depends(require_admin),
+):
+    folder = (student_folder or "").strip()
+    if not folder:
+        raise HTTPException(status_code=400, detail="student_folder is required")
+
+    safe_folder = Path(folder).name
+    if not safe_folder:
+        raise HTTPException(status_code=400, detail="Invalid folder name")
+
+    if not files:
+        raise HTTPException(status_code=400, detail="No files provided")
+
+    dest_dir = PROCESSING_DIR / "students" / safe_folder
+    dest_dir.mkdir(parents=True, exist_ok=True)
+
+    saved_paths: list[str] = []
+    for upload in files:
+        filename = Path(upload.filename or "").name
+        if not filename:
+            continue
+        content = await upload.read()
+        dest_path = dest_dir / filename
+        dest_path.write_bytes(content)
+        saved_paths.append(str(dest_path.relative_to(PROJECT_ROOT)))
+
+    if not saved_paths:
+        raise HTTPException(status_code=400, detail="No valid files uploaded")
+
+    return {
+        "message": f"Uploaded {len(saved_paths)} file(s)",
+        "paths": saved_paths,
+    }

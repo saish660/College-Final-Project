@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Panel</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap");
+
+      :root {
+        --bg: #f5f8ff;
+        --panel: #ffffff;
+        --panel-strong: #f1f4fb;
+        --border: #d9e2f3;
+        --text: #0f172a;
+        --muted: #4b5563;
+        --accent: #2563eb;
+        --accent-strong: #1d4ed8;
+        --danger: #dc2626;
+        --glow: rgba(37, 99, 235, 0.18);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 32px;
+        font-family: "Manrope", "Helvetica Neue", Arial, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+      .page {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      .hero {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 20px;
+      }
+      .hero h1 {
+        margin: 0 0 6px;
+        font-size: 28px;
+        letter-spacing: -0.5px;
+      }
+      .hero p {
+        margin: 0;
+        color: var(--muted);
+      }
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: #e5edff;
+        color: #1d4ed8;
+        font-weight: 700;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        gap: 20px;
+      }
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 18px 18px 20px;
+        box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
+      }
+      .panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      .panel h2,
+      .panel h3 {
+        margin: 0;
+      }
+      .login-panel {
+        background: var(--panel-strong);
+      }
+      form {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 10px;
+      }
+      label {
+        font-weight: 600;
+        font-size: 14px;
+        color: #1f2937;
+      }
+      input[type="text"],
+      input[type="password"],
+      .file-input {
+        width: 100%;
+        padding: 12px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: #f8fbff;
+        color: var(--text);
+        transition:
+          border 0.15s ease,
+          box-shadow 0.15s ease,
+          background 0.15s ease;
+      }
+      input:focus,
+      .file-input:focus {
+        outline: none;
+        border-color: var(--accent);
+        background: #fff;
+        box-shadow: 0 0 0 3px var(--glow);
+      }
+      button {
+        background: linear-gradient(
+          135deg,
+          var(--accent),
+          var(--accent-strong)
+        );
+        color: #fff;
+        border: none;
+        padding: 12px 14px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: 700;
+        letter-spacing: 0.1px;
+        transition:
+          transform 0.1s ease,
+          opacity 0.12s ease,
+          box-shadow 0.15s ease;
+      }
+      button:hover {
+        box-shadow: 0 8px 24px rgba(37, 99, 235, 0.25);
+      }
+      button:active {
+        transform: translateY(1px);
+      }
+      button:disabled {
+        background: #9cb8f5;
+        cursor: not-allowed;
+        opacity: 0.7;
+        box-shadow: none;
+      }
+      .token-chip {
+        margin-top: 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: #e8f1ff;
+        color: #1d4ed8;
+        font-weight: 600;
+        border: 1px dashed #c2d7ff;
+      }
+      .actions-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 14px;
+      }
+      .card {
+        background: #f8fbff;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 14px;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+      }
+      .card h3 {
+        margin: 0 0 6px;
+        font-size: 18px;
+      }
+      .card p {
+        margin: 0 0 10px;
+        color: var(--muted);
+      }
+      .hint {
+        color: var(--muted);
+        font-size: 14px;
+        margin: 4px 0 0;
+      }
+      .warning {
+        color: var(--danger);
+        font-weight: 700;
+        margin-top: 10px;
+      }
+      .status-bar {
+        margin-top: 20px;
+        padding: 14px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: #eef2fb;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+      }
+      .status {
+        font-family: "SFMono-Regular", Consolas, monospace;
+        white-space: pre-wrap;
+        min-height: 24px;
+      }
+      .lock-pill {
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: #eef2fb;
+        color: var(--muted);
+        font-weight: 700;
+      }
+      .lock-pill.unlocked {
+        background: #e5edff;
+        color: #1d4ed8;
+        border-color: rgba(37, 99, 235, 0.4);
+      }
+      .admin-panel {
+        position: relative;
+        overflow: hidden;
+      }
+      .admin-panel[data-locked="true"] .actions-grid {
+        filter: grayscale(0.35);
+        opacity: 0.45;
+        pointer-events: none;
+      }
+      .panel-overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(245, 248, 255, 0.92);
+        backdrop-filter: blur(4px);
+        border-radius: 14px;
+      }
+      .panel-overlay[hidden] {
+        display: none;
+      }
+      .panel-overlay .message {
+        text-align: center;
+        color: var(--muted);
+        max-width: 340px;
+        line-height: 1.4;
+      }
+      .panel-overlay strong {
+        color: var(--text);
+        display: block;
+        margin-bottom: 4px;
+      }
+      @media (max-width: 900px) {
+        body {
+          padding: 20px;
+        }
+        .layout {
+          grid-template-columns: 1fr;
+        }
+        .hero {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="hero">
+        <div>
+          <div class="eyebrow">Smart Classroom Management System</div>
+          <h1>Control Center</h1>
+          <p>
+            Authenticate on the left; manage zones and student images on the
+            right.
+          </p>
+        </div>
+        <div class="eyebrow" style="background: #dfe8fa; color: #1d4ed8">
+          Admin Panel
+        </div>
+      </div>
+
+      <div class="layout">
+        <aside class="panel login-panel">
+          <div class="panel-header">
+            <div>
+              <p class="hint" style="margin: 0">Access</p>
+              <h2>Admin Login</h2>
+            </div>
+          </div>
+          <p class="hint">Sign in to unlock the controls.</p>
+          <form id="loginForm">
+            <div>
+              <label for="email">Email</label>
+              <input id="email" name="email" type="text" required />
+            </div>
+            <div>
+              <label for="password">Password</label>
+              <input id="password" name="password" type="password" required />
+            </div>
+            <div
+              style="
+                display: flex;
+                gap: 8px;
+                align-items: center;
+                flex-wrap: wrap;
+              "
+            >
+              <button type="submit" id="loginBtn">Login</button>
+              <button type="button" id="logoutBtn" style="display: none">
+                Logout
+              </button>
+            </div>
+          </form>
+          <div class="token-chip" id="authStatus">Status: logged out</div>
+        </aside>
+
+        <section class="panel admin-panel" id="adminPanel" data-locked="true">
+          <div class="panel-header">
+            <div>
+              <p class="hint" style="margin: 0">Admin Controls</p>
+              <h2>Actions</h2>
+            </div>
+            <div class="lock-pill" id="lockBadge">Locked</div>
+          </div>
+          <div class="actions-grid" id="protected">
+            <div class="card">
+              <h3>Create Zones</h3>
+              <p>Launches the zone creator window on the server.</p>
+              <button id="zoneBtn" style="width: 100%">Create Zones</button>
+              <p class="warning">Requires server display access.</p>
+            </div>
+
+            <div class="card">
+              <h3>Upload Student Images</h3>
+              <p>Saves under processing/students/&lt;folder&gt;/</p>
+              <form id="uploadForm">
+                <label for="studentFolder"
+                  >Student folder (e.g., roll number or name)</label
+                >
+                <input
+                  id="studentFolder"
+                  name="studentFolder"
+                  type="text"
+                  required
+                />
+                <label for="fileInput">Image files</label>
+                <input
+                  id="fileInput"
+                  name="fileInput"
+                  class="file-input"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  required
+                />
+                <button type="submit" style="margin-top: 6px">Upload</button>
+              </form>
+            </div>
+          </div>
+
+          <div class="panel-overlay" id="adminOverlay">
+            <div class="message">
+              <strong>Login required</strong>
+              Enter your admin email and password on the left to unlock these
+              tools.
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="status-bar">
+        <div class="status" id="status">Login required.</div>
+        <p class="hint" style="margin-top: 8px">
+          If you see authorization errors, please log in again.
+        </p>
+      </div>
+    </div>
+
+    <script>
+      const statusBox = document.getElementById("status");
+      const authStatus = document.getElementById("authStatus");
+      const loginForm = document.getElementById("loginForm");
+      const loginBtn = document.getElementById("loginBtn");
+      const logoutBtn = document.getElementById("logoutBtn");
+      const emailInput = document.getElementById("email");
+      const passwordInput = document.getElementById("password");
+      const zoneBtn = document.getElementById("zoneBtn");
+      const uploadForm = document.getElementById("uploadForm");
+      const adminPanel = document.getElementById("adminPanel");
+      const adminOverlay = document.getElementById("adminOverlay");
+      const lockBadge = document.getElementById("lockBadge");
+
+      let isAuthed = false;
+
+      function setStatus(msg) {
+        statusBox.textContent = msg;
+      }
+
+      function setAuthState(authed) {
+        isAuthed = authed;
+        if (isAuthed) {
+          authStatus.textContent = "Status: logged in";
+          emailInput.value = "";
+          passwordInput.value = "";
+          emailInput.disabled = true;
+          passwordInput.disabled = true;
+          loginBtn.disabled = true;
+          logoutBtn.style.display = "inline-block";
+          logoutBtn.disabled = false;
+          adminPanel.dataset.locked = "false";
+          adminOverlay.hidden = true;
+          lockBadge.textContent = "Unlocked";
+          lockBadge.classList.add("unlocked");
+          setStatus("Authenticated. Panel unlocked.");
+        } else {
+          authStatus.textContent = "Status: logged out";
+          emailInput.disabled = false;
+          passwordInput.disabled = false;
+          loginBtn.disabled = false;
+          logoutBtn.style.display = "none";
+          emailInput.value = "";
+          passwordInput.value = "";
+          adminPanel.dataset.locked = "true";
+          adminOverlay.hidden = false;
+          lockBadge.textContent = "Locked";
+          lockBadge.classList.remove("unlocked");
+          setStatus("Login required.");
+        }
+      }
+
+      setAuthState(false);
+
+      // Attempt to restore an existing admin session
+      callApi("/admin/me")
+        .then(() => setAuthState(true))
+        .catch(() => setAuthState(false));
+
+      async function callApi(url, options = {}) {
+        const resp = await fetch(url, {
+          ...options,
+          credentials: "same-origin",
+        });
+        const data = await resp.json().catch(() => ({ message: "No JSON" }));
+        if (!resp.ok)
+          throw new Error(data.detail || data.error || JSON.stringify(data));
+        return data;
+      }
+
+      loginForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const email = document.getElementById("email").value.trim();
+        const password = document.getElementById("password").value;
+        if (!email || !password) {
+          setStatus("Provide email and password.");
+          return;
+        }
+        setStatus("Logging in...");
+        try {
+          const res = await fetch("/admin/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify({ email, password }),
+          });
+          const data = await res.json();
+          if (!res.ok)
+            throw new Error(data.detail || data.error || "Login failed");
+          setAuthState(true);
+          setStatus("Login successful.");
+        } catch (err) {
+          setAuthState(false);
+          setStatus(`Error: ${err.message}`);
+        }
+      });
+
+      logoutBtn.addEventListener("click", async () => {
+        logoutBtn.disabled = true;
+        setStatus("Logging out...");
+        try {
+          await callApi("/admin/logout", { method: "POST" });
+          setAuthState(false);
+          setStatus("Logged out.");
+        } catch (err) {
+          setStatus(`Error: ${err.message}`);
+        } finally {
+          logoutBtn.disabled = false;
+        }
+      });
+
+      zoneBtn.addEventListener("click", async () => {
+        zoneBtn.disabled = true;
+        setStatus("Starting zone creator...");
+        try {
+          const res = await callApi("/admin/zones/create", { method: "POST" });
+          setStatus(res.message || "Zone creator started");
+        } catch (err) {
+          setStatus(`Error: ${err.message}`);
+        } finally {
+          zoneBtn.disabled = false;
+        }
+      });
+
+      uploadForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const folder = document.getElementById("studentFolder").value.trim();
+        const files = Array.from(
+          document.getElementById("fileInput").files || [],
+        );
+        if (!folder || files.length === 0) {
+          setStatus("Provide folder and at least one file.");
+          return;
+        }
+        const formData = new FormData();
+        formData.append("student_folder", folder);
+        files.forEach((file) => formData.append("files", file));
+        setStatus("Uploading...");
+        try {
+          const res = await callApi("/admin/students/upload", {
+            method: "POST",
+            body: formData,
+            credentials: "same-origin",
+          });
+          const uploaded = res.paths || (res.path ? [res.path] : []);
+          const suffix = uploaded.length ? ` -> ${uploaded.join(", ")}` : "";
+          setStatus(`${res.message}${suffix}`);
+        } catch (err) {
+          setStatus(`Error: ${err.message}`);
+        }
+      });
+    </script>
+  </body>
+</html>

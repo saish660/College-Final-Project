@@ -1,6 +1,14 @@
 from sqlalchemy import Column, Integer, String, Date, ForeignKey
 from database import Base
 
+
+class Admin(Base):
+    __tablename__ = "admins"
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    email = Column(String, unique=True)
+    password = Column(String)
+
 class Student(Base):
     __tablename__ = "students"
     id = Column(Integer, primary_key=True)

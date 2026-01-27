@@ -37,3 +37,14 @@ class LightToggle(BaseModel):
     status: bool
     script_path: Optional[str] = None
     arguments: Optional[List[str]] = None
+
+
+class AdminCreate(BaseModel):
+    name: str
+    email: str
+    password: str
+
+
+class AdminLogin(BaseModel):
+    email: str
+    password: str

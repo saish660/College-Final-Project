@@ -12,3 +12,4 @@ numpy
 onnxruntime
 insightface
 faiss-cpu
+python-multipart
