@@ -16,7 +16,7 @@ FastAPI backend for teacher/student accounts, attendance tracking, and AI-powere
    ```bash
    pip install -r requirements.txt
    ```
-    **NOTE:** _This will install all the requirements for the input processing also, and might take a long time for complete installation_
+   **NOTE:** _This will install all the requirements for the input processing also, and might take a long time for complete installation_
 
 ## Running the API
 
@@ -26,6 +26,21 @@ FastAPI backend for teacher/student accounts, attendance tracking, and AI-powere
   ```
 - Open interactive docs at http://localhost:8000/docs.
 - Database is SQLite at `attendance.db` (auto-created on first run).
+
+## Admin Panel (web UI)
+
+- UI lives at [static/admin.html](static/admin.html) and is served from `/` or `/admin` once the server is running.
+- Create an admin account first (one-time):
+  ```bash
+  curl -X POST http://localhost:8000/admin/create \
+    -H "Content-Type: application/json" \
+    -d '{"name":"Admin","email":"admin@example.com","password":"changeme"}'
+  ```
+- Log in through the Admin Panel page; it sets an `admin_email` cookie for subsequent actions.
+- Available admin actions from the UI:
+  - Launch zone creator (opens the local `processing/zone_creator.py`; requires display access on the server).
+  - Upload student images into `processing/students/<folder>/` via `/admin/students/upload`.
+  - The panel also checks `/admin/me` to restore a session and `/admin/logout` to sign out.
 
 ## Data Models (SQLite)
 
