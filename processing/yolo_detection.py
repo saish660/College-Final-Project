@@ -2,6 +2,8 @@ import cv2
 import json
 import numpy as np
 from ultralytics import YOLO
+import serial
+import time
 
 # =======================
 # CONFIG
@@ -14,6 +16,11 @@ CONF_THRESHOLD = 0.40
 PROCESS_EVERY = 30
 PERSON_CLASS_ID = 0  # COCO person class
 
+SERIAL_PORT = "COM4"
+BAUD_RATE = 9600
+
+OFF_DELAY_SECONDS = 4.0  # ⏳ delay before turning OFF lights
+
 # =======================
 # Load IP Camera URL
 # =======================
@@ -24,6 +31,17 @@ cap = cv2.VideoCapture(IP_CAM_URL)
 if not cap.isOpened():
     print("❌ Camera not accessible")
     exit(1)
+
+# =======================
+# Connect to Arduino
+# =======================
+try:
+    arduino = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
+    time.sleep(1)
+    print("ARDUINO CONNECTED")
+except Exception as e:
+    print("ERROR CONNECTING TO ARDUINO:", e)
+    arduino = None
 
 # =======================
 # Load Zones
@@ -41,8 +59,11 @@ for z in raw_zones:
 
 print(f"📌 Loaded {len(zones)} zones")
 
-# Track previous occupancy to only signal on changes
-prev_zone_occupancy = {z["id"]: False for z in zones}
+# =======================
+# State Tracking
+# =======================
+prev_zone_state = {z["id"]: False for z in zones}
+last_active_time = {z["id"]: 0.0 for z in zones}
 
 # =======================
 # Load YOLO Model
@@ -73,8 +94,8 @@ try:
 
         results = model(frame, classes=[PERSON_CLASS_ID], conf=CONF_THRESHOLD)[0]
 
-        # Initialize zone states
-        zone_occupancy = {z["id"]: False for z in zones}
+        # Current detection state
+        zone_detected = {z["id"]: False for z in zones}
 
         for box in results.boxes:
             cls = int(box.cls[0])
@@ -89,22 +110,40 @@ try:
 
             for z in zones:
                 if point_in_poly((cx, cy), z["poly"]):
-                    zone_occupancy[z["id"]] = True
+                    zone_detected[z["id"]] = True
+
+        now = time.time()
 
         # =======================
-        # Terminal Output (Lights)
+        # Light Control Logic
         # =======================
-        changed = any(zone_occupancy[z["id"]] != prev_zone_occupancy[z["id"]] for z in zones)
-        if changed:
-            print("\nZone Status (changed):")
-            for z in zones:
-                state = "💡 ON" if zone_occupancy[z["id"]] else "❌ OFF"
-                print(f"{z['name']} : {state}")
-            prev_zone_occupancy = zone_occupancy.copy()
+        for z in zones:
+            zid = z["id"]
+            detected = zone_detected[zid]
+            was_on = prev_zone_state[zid]
+
+            # 🔆 Person detected → ON immediately
+            if detected:
+                last_active_time[zid] = now
+                if not was_on:
+                    if arduino:
+                        arduino.write(f"Z{zid}:1\n".encode())
+                    print(f"{z['name']} : ON")
+                    prev_zone_state[zid] = True
+
+            # ⏳ No person → delayed OFF
+            else:
+                if was_on and (now - last_active_time[zid]) >= OFF_DELAY_SECONDS:
+                    if arduino:
+                        arduino.write(f"Z{zid}:0\n".encode())
+                    print(f"{z['name']} : OFF")
+                    prev_zone_state[zid] = False
 
 except KeyboardInterrupt:
     print("\n🛑 Stopped by user")
 
 finally:
     cap.release()
+    if arduino:
+        arduino.close()
     print("✅ Shutdown complete")
