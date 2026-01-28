@@ -62,6 +62,32 @@
         text-transform: uppercase;
         letter-spacing: 0.4px;
       }
+      .docs-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        border-radius: 12px;
+        background: linear-gradient(
+          135deg,
+          var(--accent),
+          var(--accent-strong)
+        );
+        color: #fff;
+        font-weight: 700;
+        letter-spacing: 0.1px;
+        text-decoration: none;
+        transition:
+          transform 0.1s ease,
+          opacity 0.12s ease,
+          box-shadow 0.15s ease;
+      }
+      .docs-button:hover {
+        box-shadow: 0 10px 28px rgba(37, 99, 235, 0.32);
+      }
+      .docs-button:active {
+        transform: translateY(1px);
+      }
       .layout {
         display: grid;
         grid-template-columns: 320px 1fr;
@@ -101,6 +127,7 @@
       }
       input[type="text"],
       input[type="password"],
+      input[type="email"],
       .file-input {
         width: 100%;
         padding: 12px;
@@ -251,6 +278,127 @@
         display: block;
         margin-bottom: 4px;
       }
+      .email-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      .email-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: #fff;
+        gap: 8px;
+      }
+      .email-item span {
+        font-weight: 700;
+        color: var(--text);
+        font-size: 14px;
+        word-break: break-all;
+      }
+      .ghost-button {
+        background: #eef2fb;
+        color: var(--muted);
+        border: 1px solid var(--border);
+        padding: 8px 10px;
+        border-radius: 8px;
+        font-weight: 700;
+        box-shadow: none;
+      }
+      .ghost-button:hover {
+        background: #e5edff;
+        box-shadow: none;
+      }
+      .ghost-button.danger {
+        color: #b91c1c;
+        border-color: #fca5a5;
+        background: #fef2f2;
+      }
+      .ghost-button.danger:hover {
+        background: #fee2e2;
+      }
+      .email-item .ghost-button {
+        padding: 6px 8px;
+        font-size: 12px;
+        white-space: nowrap;
+      }
+      .allowlist-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin: 10px 0 6px;
+      }
+      .allowlist-meta .count-chip {
+        border-radius: 999px;
+        font-weight: 700;
+        color: var(--muted);
+      }
+      .allowlist-meta button {
+        padding: 10px 12px;
+      }
+      .email-list {
+        max-height: 180px;
+        overflow: auto;
+      }
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.55);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        z-index: 1000;
+        backdrop-filter: blur(2px);
+      }
+      .modal-backdrop[hidden] {
+        display: none;
+      }
+      .modal {
+        background: #fff;
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        max-width: 520px;
+        width: 100%;
+        padding: 18px;
+        box-shadow: 0 20px 44px rgba(15, 23, 42, 0.22);
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .modal header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .modal h3 {
+        margin: 0;
+      }
+      .modal .close-btn {
+        background: none;
+        border: none;
+        color: var(--muted);
+        padding: 8px;
+        cursor: pointer;
+        border-radius: 8px;
+      }
+      .modal .close-btn:hover {
+        background: #f1f4fb;
+      }
+      .modal .email-list {
+        max-height: 320px;
+      }
+      .pill-label {
+        font-size: 13px;
+        color: var(--muted);
+        margin: 0;
+      }
       @media (max-width: 900px) {
         body {
           padding: 20px;
@@ -276,9 +424,13 @@
             right.
           </p>
         </div>
-        <div class="eyebrow" style="background: #dfe8fa; color: #1d4ed8">
-          Admin Panel
-        </div>
+        <a
+          class="docs-button"
+          href="http://localhost:8000/docs"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Backend API Documentation</a
+        >
       </div>
 
       <div class="layout">
@@ -358,6 +510,39 @@
                 <button type="submit" style="margin-top: 6px">Upload</button>
               </form>
             </div>
+
+            <div class="card">
+              <h3>Teacher Allowlist</h3>
+              <p>Only emails listed here can register as teachers.</p>
+              <form id="allowlistForm">
+                <label for="allowlistEmail">Email to allow</label>
+                <input
+                  id="allowlistEmail"
+                  name="allowlistEmail"
+                  type="email"
+                  placeholder="teacher@example.com"
+                  required
+                />
+                <button
+                  id="allowlistSubmit"
+                  type="submit"
+                  style="margin-top: 6px"
+                >
+                  Add Email
+                </button>
+              </form>
+              <div class="allowlist-meta">
+                <button
+                  type="button"
+                  id="viewAllowlistBtn"
+                  class="ghost-button"
+                >
+                  View all (<span class="count-chip" id="allowlistCount"
+                    >0 emails</span
+                  >)
+                </button>
+              </div>
+            </div>
           </div>
 
           <div class="panel-overlay" id="adminOverlay">
@@ -378,6 +563,26 @@
       </div>
     </div>
 
+    <!-- Allowlist modal -->
+    <div class="modal-backdrop" id="allowlistModal" hidden>
+      <div class="modal">
+        <header>
+          <h3>Teacher Allowlist</h3>
+          <button
+            class="close-btn"
+            id="allowlistModalClose"
+            aria-label="Close allowlist dialog"
+          >
+            ✕
+          </button>
+        </header>
+        <p class="pill-label" style="margin-bottom: 4px">All allowed emails</p>
+        <div class="email-list" id="allowlistModalList">
+          <p class="hint">Login to manage allowed emails.</p>
+        </div>
+      </div>
+    </div>
+
     <script>
       const statusBox = document.getElementById("status");
       const authStatus = document.getElementById("authStatus");
@@ -391,11 +596,30 @@
       const adminPanel = document.getElementById("adminPanel");
       const adminOverlay = document.getElementById("adminOverlay");
       const lockBadge = document.getElementById("lockBadge");
+      const allowlistForm = document.getElementById("allowlistForm");
+      const allowlistEmailInput = document.getElementById("allowlistEmail");
+      const allowlistSubmit = document.getElementById("allowlistSubmit");
+      const allowlistCount = document.getElementById("allowlistCount");
+      const viewAllowlistBtn = document.getElementById("viewAllowlistBtn");
+
+      // Modal elements for the allowlist
+      const allowlistModal = document.getElementById("allowlistModal");
+      const allowlistModalClose = document.getElementById(
+        "allowlistModalClose",
+      );
+      const allowlistModalList = document.getElementById("allowlistModalList");
+
+      let allowlistData = [];
 
       let isAuthed = false;
 
       function setStatus(msg) {
         statusBox.textContent = msg;
+      }
+
+      function setAllowlistEnabled(enabled) {
+        if (allowlistEmailInput) allowlistEmailInput.disabled = !enabled;
+        if (allowlistSubmit) allowlistSubmit.disabled = !enabled;
       }
 
       function setAuthState(authed) {
@@ -413,6 +637,8 @@
           adminOverlay.hidden = true;
           lockBadge.textContent = "Unlocked";
           lockBadge.classList.add("unlocked");
+          setAllowlistEnabled(true);
+          loadAllowlist();
           setStatus("Authenticated. Panel unlocked.");
         } else {
           authStatus.textContent = "Status: logged out";
@@ -426,6 +652,11 @@
           adminOverlay.hidden = false;
           lockBadge.textContent = "Locked";
           lockBadge.classList.remove("unlocked");
+          setAllowlistEnabled(false);
+          if (allowlistModalList)
+            allowlistModalList.innerHTML =
+              '<p class="hint">Login to manage allowed emails.</p>';
+          if (allowlistCount) allowlistCount.textContent = "0 emails";
           setStatus("Login required.");
         }
       }
@@ -446,6 +677,87 @@
         if (!resp.ok)
           throw new Error(data.detail || data.error || JSON.stringify(data));
         return data;
+      }
+
+      function renderAllowlist(entries = [], targetEl) {
+        const target = targetEl || allowlistModalList;
+        if (!target) return;
+        if (!entries.length) {
+          target.innerHTML = '<p class="hint">No allowed emails yet.</p>';
+          return;
+        }
+        target.innerHTML = "";
+        entries.forEach((entry) => {
+          const row = document.createElement("div");
+          row.className = "email-item";
+
+          const label = document.createElement("span");
+          label.textContent = entry.email;
+
+          const removeBtn = document.createElement("button");
+          removeBtn.type = "button";
+          removeBtn.className = "ghost-button danger";
+          removeBtn.textContent = "Remove";
+          removeBtn.addEventListener("click", () =>
+            removeAllowEmail(entry.email),
+          );
+
+          row.append(label, removeBtn);
+          target.appendChild(row);
+        });
+      }
+
+      async function loadAllowlist() {
+        if (!isAuthed) return;
+        if (allowlistModalList)
+          allowlistModalList.innerHTML =
+            '<p class="hint">Loading allowlist...</p>';
+        try {
+          const data = await callApi("/admin/teacher-allowlist");
+          allowlistData = data;
+          if (allowlistCount)
+            allowlistCount.textContent = `${data.length} email${
+              data.length === 1 ? "" : "s"
+            }`;
+          renderAllowlist(data, allowlistModalList);
+        } catch (err) {
+          if (allowlistModalList)
+            allowlistModalList.innerHTML = `<p class="warning">Failed to load allowlist: ${err.message}</p>`;
+        }
+      }
+
+      async function addAllowEmail(email) {
+        setAllowlistEnabled(false);
+        setStatus("Adding email to allowlist...");
+        try {
+          await callApi("/admin/teacher-allowlist", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email }),
+          });
+          if (allowlistEmailInput) allowlistEmailInput.value = "";
+          setStatus("Email added to allowlist.");
+          await loadAllowlist();
+        } catch (err) {
+          setStatus(`Error: ${err.message}`);
+        } finally {
+          setAllowlistEnabled(true);
+        }
+      }
+
+      async function removeAllowEmail(email) {
+        setStatus("Removing email from allowlist...");
+        try {
+          await callApi("/admin/teacher-allowlist", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email }),
+          });
+          setStatus("Email removed from allowlist.");
+          await loadAllowlist();
+        } catch (err) {
+          setStatus(`Error: ${err.message}`);
+        }
       }
 
       loginForm.addEventListener("submit", async (e) => {
@@ -500,6 +812,43 @@
         } finally {
           zoneBtn.disabled = false;
         }
+      });
+
+      if (allowlistForm) {
+        allowlistForm.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const email = (allowlistEmailInput?.value || "").trim();
+          if (!email || !email.includes("@")) {
+            setStatus("Enter a valid email address.");
+            return;
+          }
+          await addAllowEmail(email);
+        });
+      }
+
+      // Modal open/close helpers
+      function openAllowlistModal() {
+        if (!allowlistModal) return;
+        allowlistModal.hidden = false;
+        renderAllowlist(allowlistData, allowlistModalList);
+      }
+
+      function closeAllowlistModal() {
+        if (!allowlistModal) return;
+        allowlistModal.hidden = true;
+      }
+
+      viewAllowlistBtn?.addEventListener("click", () => {
+        if (!isAuthed) {
+          setStatus("Login required to view allowlist.");
+          return;
+        }
+        openAllowlistModal();
+      });
+
+      allowlistModalClose?.addEventListener("click", closeAllowlistModal);
+      allowlistModal?.addEventListener("click", (e) => {
+        if (e.target === allowlistModal) closeAllowlistModal();
       });
 
       uploadForm.addEventListener("submit", async (e) => {

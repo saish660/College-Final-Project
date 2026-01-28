@@ -98,10 +98,54 @@ def admin_me(admin=Depends(require_admin)):
 
 
 # ---------------------------
+# TEACHER ALLOWLIST (ADMIN ONLY)
+# ---------------------------
+@app.get("/admin/teacher-allowlist", response_model=List[schemas.AllowedTeacherEmail])
+def get_teacher_allowlist(admin=Depends(require_admin), db: Session = Depends(get_db)):
+    return db.query(models.AllowedTeacherEmail).order_by(models.AllowedTeacherEmail.email).all()
+
+
+@app.post("/admin/teacher-allowlist", response_model=schemas.AllowedTeacherEmail)
+def add_teacher_allowlist(
+    data: schemas.AllowedTeacherEmailCreate,
+    admin=Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    existing = db.query(models.AllowedTeacherEmail).filter(models.AllowedTeacherEmail.email == data.email).first()
+    if existing:
+        return existing
+
+    entry = models.AllowedTeacherEmail(email=data.email)
+    db.add(entry)
+    db.commit()
+    db.refresh(entry)
+    return entry
+
+
+@app.delete("/admin/teacher-allowlist")
+def remove_teacher_allowlist(
+    data: schemas.AllowedTeacherEmailCreate,
+    admin=Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    entry = db.query(models.AllowedTeacherEmail).filter(models.AllowedTeacherEmail.email == data.email).first()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Email not found in allowlist")
+
+    db.delete(entry)
+    db.commit()
+    return {"message": "Email removed from allowlist"}
+
+
+# ---------------------------
 # CREATE TEACHER API
 # ---------------------------
 @app.post("/create-teacher")
 def create_teacher(data: schemas.TeacherCreate, db: Session = Depends(get_db)):
+    allowed = db.query(models.AllowedTeacherEmail).filter(models.AllowedTeacherEmail.email == data.email).first()
+    if not allowed:
+        raise HTTPException(status_code=403, detail="Email not allowed for teacher signup")
+
     # Check if teacher already exists
     existing_teacher = db.query(models.Teacher).filter(
         models.Teacher.email == data.email

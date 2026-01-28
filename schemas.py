@@ -48,3 +48,18 @@ class AdminCreate(BaseModel):
 class AdminLogin(BaseModel):
     email: str
     password: str
+
+
+class AllowedTeacherEmailBase(BaseModel):
+    email: str
+
+
+class AllowedTeacherEmailCreate(AllowedTeacherEmailBase):
+    pass
+
+
+class AllowedTeacherEmail(AllowedTeacherEmailBase):
+    id: int
+
+    class Config:
+        orm_mode = True

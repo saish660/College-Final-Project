@@ -24,6 +24,12 @@ class Teacher(Base):
     email = Column(String, unique=True)
     password = Column(String)
 
+
+class AllowedTeacherEmail(Base):
+    __tablename__ = "allowed_teacher_emails"
+    id = Column(Integer, primary_key=True)
+    email = Column(String, unique=True)
+
 class Attendance(Base):
     __tablename__ = "attendance"
     id = Column(Integer, primary_key=True)
