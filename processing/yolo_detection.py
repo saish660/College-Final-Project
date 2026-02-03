@@ -81,69 +81,63 @@ def point_in_poly(point, poly):
 # =======================
 frame_count = 0
 
-try:
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            print("❌ Camera read failed")
-            break
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        print("❌ Camera read failed")
+        break
 
-        frame_count += 1
-        if frame_count % PROCESS_EVERY != 0:
+    frame_count += 1
+    if frame_count % PROCESS_EVERY != 0:
+        continue
+
+    results = model(frame, classes=[PERSON_CLASS_ID], conf=CONF_THRESHOLD)[0]
+
+    # Current detection state
+    zone_detected = {z["id"]: False for z in zones}
+
+    for box in results.boxes:
+        cls = int(box.cls[0])
+        conf = float(box.conf[0])
+
+        if cls != PERSON_CLASS_ID or conf < CONF_THRESHOLD:
             continue
 
-        results = model(frame, classes=[PERSON_CLASS_ID], conf=CONF_THRESHOLD)[0]
+        x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
+        cx = int((x1 + x2) / 2)
+        cy = int((y1 + y2) / 2)
 
-        # Current detection state
-        zone_detected = {z["id"]: False for z in zones}
-
-        for box in results.boxes:
-            cls = int(box.cls[0])
-            conf = float(box.conf[0])
-
-            if cls != PERSON_CLASS_ID or conf < CONF_THRESHOLD:
-                continue
-
-            x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
-            cx = int((x1 + x2) / 2)
-            cy = int((y1 + y2) / 2)
-
-            for z in zones:
-                if point_in_poly((cx, cy), z["poly"]):
-                    zone_detected[z["id"]] = True
-
-        now = time.time()
-
-        # =======================
-        # Light Control Logic
-        # =======================
         for z in zones:
-            zid = z["id"]
-            detected = zone_detected[zid]
-            was_on = prev_zone_state[zid]
+            if point_in_poly((cx, cy), z["poly"]):
+                zone_detected[z["id"]] = True
 
-            # 🔆 Person detected → ON immediately
-            if detected:
-                last_active_time[zid] = now
-                if not was_on:
-                    if arduino:
-                        arduino.write(f"Z{zid}:1\n".encode())
-                    print(f"{z['name']} : ON")
-                    prev_zone_state[zid] = True
+    now = time.time()
 
-            # ⏳ No person → delayed OFF
-            else:
-                if was_on and (now - last_active_time[zid]) >= OFF_DELAY_SECONDS:
-                    if arduino:
-                        arduino.write(f"Z{zid}:0\n".encode())
-                    print(f"{z['name']} : OFF")
-                    prev_zone_state[zid] = False
+    # =======================
+    # Light Control Logic
+    # =======================
+    for z in zones:
+        zid = z["id"]
+        detected = zone_detected[zid]
+        was_on = prev_zone_state[zid]
 
-except KeyboardInterrupt:
-    print("\n🛑 Stopped by user")
+        # 🔆 Person detected → ON immediately
+        if detected:
+            last_active_time[zid] = now
+            if not was_on:
+                if arduino:
+                    arduino.write(f"Z{zid}:1\n".encode())
+                print(f"{z['name']} : ON")
+                prev_zone_state[zid] = True
 
-finally:
-    cap.release()
-    if arduino:
-        arduino.close()
-    print("✅ Shutdown complete")
+        # ⏳ No person → delayed OFF
+        else:
+            if was_on and (now - last_active_time[zid]) >= OFF_DELAY_SECONDS:
+                if arduino:
+                    arduino.write(f"Z{zid}:0\n".encode())
+                print(f"{z['name']} : OFF")
+                prev_zone_state[zid] = False
+
+# Cleanup (always runs after loop exits)
+cap.release()
+print("✅ Camera and detection shutdown complete")

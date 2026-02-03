@@ -1,6 +1,5 @@
 # AI Based System for Automated Classroom Management
 
-
 ## Setting up
 
 - `pip install -r requirements.txt`

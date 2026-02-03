@@ -48,33 +48,122 @@ FastAPI backend for teacher/student accounts, attendance tracking, and AI-powere
 - `students(id, name, roll_no, email, password)`
 - `attendance(id, student_id, date, status)`
 
-## REST API
+## REST API (2026)
 
-All request/response bodies are JSON.
+All request/response bodies are JSON unless otherwise noted.
 
-### Auth & Users
+### Admin Endpoints
 
-- **POST /create-teacher** — body: `{ name, email, password }` → creates a teacher.
-- **POST /create-student** — body: `{ name, roll_no, email, password }` → creates a student.
-- **POST /login** — body: `{ email, password }` → `{ token }` (teacher JWT).
-- **POST /student/login** — body: `{ email, password }` → `{ token }` (student JWT).
+- **POST /admin/create**
+  - Create a new admin account.
+  - Request: `{ "name": str, "email": str, "password": str }`
+  - Response: `{ "message": "Admin created successfully" }` or `{ "error": "Admin already exists" }`
 
-### Attendance
+- **POST /admin/login**
+  - Log in as admin. Sets an `admin_email` cookie.
+  - Request: `{ "email": str, "password": str }`
+  - Response: `{ "message": "Logged in" }` (cookie set)
 
-- **POST /attendance/confirm** — body: `{ student_id, date, status }` → stores a record.
-- **GET /attendance/student/{student_id}** — returns all records for that student.
-- **POST /attendance/process** — trigger the attendance AI script.
-  - Body: `{ script_path?: string, arguments?: string[] }`
-  - Defaults to `processing/mark_attendance.py` if `script_path` is omitted.
-  - Streams script output to the server log; response: `{ message }`.
+- **POST /admin/logout**
+  - Log out admin (removes cookie).
+  - Response: `{ "message": "Logged out" }`
 
-### Smart Lights (YOLO-based detector)
+- **GET /admin/me**
+  - Get current admin info (requires cookie).
+  - Response: `{ "email": str, "name": str }`
 
-- **POST /lights/toggle** — start/stop the light detection script.
-  - Body: `{ status: boolean, script_path?: string, arguments?: string[] }`
-  - `status=true` starts `processing/yolo_detection.py` (or provided `script_path`).
-  - `status=false` stops a running process.
-  - Response: `{ lights_on: bool, process: "started"|"stopped"|"already running" }`.
+#### Teacher Allowlist (Admin Only)
+
+- **GET /admin/teacher-allowlist**
+  - List allowed teacher emails.
+  - Response: `[ { "email": str }, ... ]`
+
+- **POST /admin/teacher-allowlist**
+  - Add a teacher email to allowlist.
+  - Request: `{ "email": str }`
+  - Response: `{ "email": str }`
+
+- **DELETE /admin/teacher-allowlist**
+  - Remove a teacher email from allowlist.
+  - Request: `{ "email": str }`
+  - Response: `{ "message": "Email removed from allowlist" }`
+
+#### Admin Utilities
+
+- **POST /admin/zones/create**
+  - Launch the zone creator script (for marking classroom zones).
+  - Response: `{ "message": "Script executed successfully", "output": str }` or error details.
+
+- **POST /admin/students/upload**
+  - Upload student images for face recognition.
+  - Form-data: `student_folder` (str), `files` (multiple images)
+  - Response: `{ "message": "Images uploaded" }` or error details.
+
+### Teacher & Student Endpoints
+
+- **POST /create-teacher**
+  - Register a new teacher (email must be allowlisted).
+  - Request: `{ "name": str, "email": str, "password": str }`
+  - Response: `{ "message": "Teacher created successfully" }` or `{ "error": "Teacher already exists" }`
+
+- **POST /create-student**
+  - Register a new student.
+  - Request: `{ "name": str, "roll_no": str, "email": str, "password": str }`
+  - Response: `{ "message": "Student created successfully" }` or `{ "error": "Student already exists" }`
+
+- **POST /login**
+  - Teacher login.
+  - Request: `{ "email": str, "password": str }`
+  - Response: `{ "token": str }` (JWT)
+
+- **POST /student/login**
+  - Student login.
+  - Request: `{ "email": str, "password": str }`
+  - Response: `{ "token": str }` (JWT)
+
+### Attendance Endpoints
+
+- **POST /attendance/confirm**
+  - Save a student's attendance record.
+  - Request: `{ "student_id": int, "date": "YYYY-MM-DD", "status": str }`
+  - Response: `{ "message": "Attendance saved" }`
+
+- **GET /attendance/student/{student_id}**
+  - Get all attendance records for a student.
+  - Response: `[ { ...attendance fields... } ]`
+
+- **POST /attendance/process**
+  - Trigger the attendance AI script (face recognition over IP camera).
+  - Request: `{ "script_path"?: str, "arguments"?: [str, ...] }`
+  - Defaults to `processing/mark_attendance.py` if omitted.
+  - Response: `{ "message": "Script executed successfully", "output": str }` or error details.
+
+### Smart Lights (YOLO-based Detector)
+
+- **POST /lights/toggle**
+  - Start or stop the YOLO-based light detection script.
+  - Request: `{ "status": bool, "script_path"?: str, "arguments"?: [str, ...] }`
+  - `status=true` starts detection; `status=false` stops it.
+  - Response: `{ "lights_on": bool, "process": "started"|"stopped"|"already running" }`
+
+### Admin Panel (Web UI)
+
+- **GET /** and **GET /admin**
+  - Serves the admin panel HTML page.
+  - Response: HTML file (not JSON)
+
+---
+
+## API Usage Notes
+
+- All endpoints expect and return JSON unless otherwise specified.
+- Admin endpoints require authentication via cookie (set by `/admin/login`).
+- Teacher creation requires the email to be allowlisted by an admin.
+- Attendance and light control endpoints may trigger scripts; errors are returned as HTTP 500 with details.
+- For uploading student images, use multipart/form-data with `student_folder` and one or more image files.
+- The `/attendance/process` and `/lights/toggle` endpoints stream script output to the server log; the API response is a short confirmation or error.
+
+For more details, see the interactive docs at `/docs` when the server is running.
 
 ## AI Scripts (processing/)
 

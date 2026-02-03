@@ -302,16 +302,63 @@ def _run_script_or_error(script_path: Path, args: list[str]):
 
 def _stop_light_process():
     global light_process
+
+    # If nothing is running, do nothing
     if light_process is None:
         return "not running"
 
-    if light_process.poll() is None:
-        light_process.terminate()
-        try:
-            light_process.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            light_process.kill()
-    light_process = None
+    # ---- STOP YOLO PROCESS CLEANLY ----
+    try:
+        if light_process.poll() is None:
+            light_process.terminate()
+            try:
+                light_process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                light_process.kill()
+                light_process.wait()
+    finally:
+        light_process = None
+
+    # ---- VERY IMPORTANT (Windows COM port release) ----
+    time.sleep(1.5)  # allow Windows to fully release COM4
+
+    # ---- ARDUINO CLEANUP ----
+    arduino = None
+    try:
+        import serial
+        import json
+
+        zones_path = (PROCESSING_DIR / "zones.json").resolve()
+        if not zones_path.is_file():
+            print("⚠️ zones.json not found, skipping Arduino cleanup")
+            return "stopped"
+
+        arduino = serial.Serial("COM4", 9600, timeout=1)
+        time.sleep(2)  # Arduino reset delay (VERY IMPORTANT)
+
+        with open(zones_path, "r", encoding="utf-8") as f:
+            raw_zones = json.load(f)
+
+        print("Shutting down all zones...")
+        for z in raw_zones:
+            zid = z["id"]
+            arduino.write(f"Z{zid}:0\n".encode())
+            time.sleep(0.05)  # prevent serial buffer overflow
+            print(f"{z.get('name', f'Zone {zid}')} : OFF (forced shutdown)")
+
+        print("✅ Arduino cleanup complete")
+
+    except PermissionError as e:
+        print("⚠️ COM4 still busy, cleanup skipped:", e)
+
+    except Exception as e:
+        print(f"⚠️ Arduino cleanup error: {e}")
+
+    finally:
+        if arduino and arduino.is_open:
+            arduino.close()
+            time.sleep(0.5)
+
     return "stopped"
 
 
