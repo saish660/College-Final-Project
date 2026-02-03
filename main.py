@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
+from zoneinfo import ZoneInfo
 import subprocess
 import sys
 import time
@@ -20,6 +21,9 @@ app = FastAPI(title="Smart Classroom Backend")
 # Smart lights simple in-memory state
 light_state = {"on": False}
 light_process = None
+
+# Local timezone
+IST = ZoneInfo("Asia/Kolkata")
 
 # Fixed script locations (do not auto-guess)
 PROJECT_ROOT = Path(__file__).resolve().parent  # smart_classroom_backend
@@ -225,20 +229,25 @@ def student_login(data: schemas.Login, db: Session = Depends(get_db)):
         return {"error": "Wrong password"}
 
     token = auth.create_token({"user": student.email, "role": "student"})
-    return {"token": token}
+    return {"token": token, "roll_no": student.roll_no}
 
 # ---------------------------
 # CONFIRM ATTENDANCE
 # ---------------------------
 @app.post("/attendance/confirm")
 def confirm_attendance(data: schemas.AttendanceConfirm, db: Session = Depends(get_db)):
-    attendance_date = data.date or (data.timestamp.date() if data.timestamp else date.today())
+    attendance_date = data.date
+    if attendance_date is None:
+        if data.timestamp:
+            attendance_date = data.timestamp.astimezone(IST).date()
+        else:
+            attendance_date = datetime.now(IST).date()
     record = models.Attendance(
         student_id=data.student_id,
         roll_no=data.roll_no,
         date=attendance_date,
         status=data.status,
-        captured_at=data.timestamp or datetime.utcnow(),
+        captured_at=data.timestamp.astimezone(IST) if data.timestamp else datetime.now(IST),
         teacher_email=data.teacher_email,
         confidence=data.confidence,
     )

@@ -1,5 +1,6 @@
 import argparse
 from datetime import datetime
+from zoneinfo import ZoneInfo
 import sys
 import cv2
 import math
@@ -57,6 +58,9 @@ SAME_FACE_MERGE_THRESHOLD = 0.65 # merge detections of the same person across fr
 
 # GPU first, CPU fallback
 PROVIDERS = ["CUDAExecutionProvider", "CPUExecutionProvider"]
+
+# Local timezone for timestamping
+IST = ZoneInfo("Asia/Kolkata")
 
 
 # ------------------------------
@@ -236,7 +240,7 @@ def record_attendance(
     status: str,
     student_id: Optional[int] = None,
 ):
-    now = datetime.utcnow()
+    now = datetime.now(IST)
     session.add(
         models.Attendance(
             student_id=student_id,
@@ -347,8 +351,10 @@ def run_once(
             {
                 "roll_no": roll_no,
                 "student_id": student.id if student else None,
+                "name": student.name if student else None,
                 "confidence": meta["max_sim"],
                 "samples": meta["samples"],
+                "status": status,
             }
         )
         print(
