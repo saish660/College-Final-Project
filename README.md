@@ -46,7 +46,7 @@ FastAPI backend for teacher/student accounts, attendance tracking, and AI-powere
 
 - `teachers(id, name, email, password)`
 - `students(id, name, roll_no, email, password)`
-- `attendance(id, student_id, date, status)`
+- `attendance(id, student_id, roll_no, date, status, captured_at, teacher_email, confidence)`
 
 ## REST API (2026)
 
@@ -125,11 +125,15 @@ All request/response bodies are JSON unless otherwise noted.
 
 - **POST /attendance/confirm**
   - Save a student's attendance record.
-  - Request: `{ "student_id": int, "date": "YYYY-MM-DD", "status": str }`
+  - Request: `{ "student_id"?: int, "roll_no"?: str, "date"?: "YYYY-MM-DD", "status": str, "teacher_email": str, "confidence": float, "timestamp"?: ISO8601 }`
   - Response: `{ "message": "Attendance saved" }`
 
 - **GET /attendance/student/{student_id}**
   - Get all attendance records for a student.
+  - Response: `[ { ...attendance fields... } ]`
+
+- **GET /attendance/roll/{roll_no}**
+  - Get all attendance records by roll number (works even if the student has not registered yet).
   - Response: `[ { ...attendance fields... } ]`
 
 - **POST /attendance/process**

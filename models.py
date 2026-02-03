@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Date, ForeignKey
+from datetime import datetime
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, DateTime, Float
 from database import Base
 
 
@@ -34,5 +35,9 @@ class Attendance(Base):
     __tablename__ = "attendance"
     id = Column(Integer, primary_key=True)
     student_id = Column(Integer, ForeignKey("students.id"))
+    roll_no = Column(String)
     date = Column(Date)
     status = Column(String)
+    captured_at = Column(DateTime, default=datetime.utcnow)
+    teacher_email = Column(String)
+    confidence = Column(Float)

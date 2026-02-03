@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date, datetime
 import subprocess
 import sys
 import time
@@ -231,10 +232,15 @@ def student_login(data: schemas.Login, db: Session = Depends(get_db)):
 # ---------------------------
 @app.post("/attendance/confirm")
 def confirm_attendance(data: schemas.AttendanceConfirm, db: Session = Depends(get_db)):
+    attendance_date = data.date or (data.timestamp.date() if data.timestamp else date.today())
     record = models.Attendance(
         student_id=data.student_id,
-        date=data.date,
-        status=data.status
+        roll_no=data.roll_no,
+        date=attendance_date,
+        status=data.status,
+        captured_at=data.timestamp or datetime.utcnow(),
+        teacher_email=data.teacher_email,
+        confidence=data.confidence,
     )
     db.add(record)
     db.commit()
@@ -248,6 +254,12 @@ def get_attendance(student_id: int, db: Session = Depends(get_db)):
     return db.query(models.Attendance).filter(
         models.Attendance.student_id == student_id
     ).all()
+
+
+@app.get("/attendance/roll/{roll_no}")
+def get_attendance_by_roll(roll_no: str, db: Session = Depends(get_db)):
+    """Return attendance records using roll number (covers unregistered students)."""
+    return db.query(models.Attendance).filter(models.Attendance.roll_no == roll_no).all()
 
 def _ensure_script_exists(path: Path, label: str) -> Path:
     script = path.expanduser().resolve()
@@ -393,16 +405,21 @@ def _start_light_process(script_path: Path, args: list[str]):
 
 
 # ---------------------------
-# RUN ATTENDANCE AI SCRIPT
+# RUN ATTENDANCE AI SCRIPT (API-triggered)
 # ---------------------------
 @app.post("/attendance/process")
-def run_attendance_ai(req: schemas.AttendanceScriptTrigger):
-    # Resolve and validate script path in one step
-    resolved_path = _resolve_script_path(req.script_path, ATTENDANCE_SCRIPT_PATH)
-    script_path = _ensure_script_exists(resolved_path, "Attendance")
-    args = req.arguments or []
+def run_attendance_ai(req: schemas.AttendanceProcessRequest, db: Session = Depends(get_db)):
+    try:
+        from processing import mark_attendance
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=500, detail=f"Failed to load attendance pipeline: {exc}")
 
-    return _run_script_or_error(script_path, args)
+    result = mark_attendance.run_pipeline(
+        teacher_email=req.teacher_email,
+        status=req.status,
+        session=db,
+    )
+    return {"message": "Attendance run completed", **(result or {})}
 
 
 # ---------------------------

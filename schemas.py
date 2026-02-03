@@ -1,5 +1,5 @@
+from datetime import date, datetime
 from pydantic import BaseModel
-from datetime import date
 from typing import List, Optional
 
 class Login(BaseModel):
@@ -19,9 +19,13 @@ class TeacherCreate(BaseModel):
     password: str
 
 class AttendanceConfirm(BaseModel):
-    student_id: int
-    date: date
-    status: str
+    student_id: Optional[int] = None
+    roll_no: Optional[str] = None
+    date: Optional[date] = None
+    status: str = "present"
+    teacher_email: str
+    confidence: float
+    timestamp: Optional[datetime] = None
 
 
 class Token(BaseModel):
@@ -31,6 +35,11 @@ class Token(BaseModel):
 class AttendanceScriptTrigger(BaseModel):
     script_path: Optional[str] = None
     arguments: Optional[List[str]] = None
+
+
+class AttendanceProcessRequest(BaseModel):
+    teacher_email: str
+    status: str = "present"
 
 
 class LightToggle(BaseModel):

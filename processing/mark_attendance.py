@@ -1,10 +1,12 @@
-import os
+import argparse
+from datetime import datetime
+import sys
 import cv2
 import math
 import time
 import numpy as np
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
 import insightface
 from insightface.app import FaceAnalysis
@@ -12,6 +14,13 @@ from insightface.utils import face_align
 
 
 BASE_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = BASE_DIR.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.append(str(PROJECT_ROOT))
+
+from database import SessionLocal
+import models
+
 IP_CAM_URL_FILE = BASE_DIR / "ip_camera_url.txt"
 
 
@@ -31,7 +40,7 @@ def load_ip_cam_url(path=IP_CAM_URL_FILE):
 IP_CAMERA_VIDEO_URL = load_ip_cam_url()
 
 
-STUDENTS_DIR = "students"
+STUDENTS_DIR = BASE_DIR / "students"
 FRAMES_PER_TRIGGER = 5           # capture 3–5 frames per button press
 MIN_FACE_SIZE = 40               # px (bare-minimum gate)
 LAPLACIAN_VAR_THRESHOLD = 20.0   # lower = blurrier (bare-minimum gate)
@@ -134,22 +143,23 @@ def align_face(image: np.ndarray, face) -> np.ndarray:
 
 def load_student_db(app: FaceAnalysis) -> Dict[str, List[np.ndarray]]:
     db: Dict[str, List[np.ndarray]] = {}
-    for student in os.listdir(STUDENTS_DIR):
-        folder = os.path.join(STUDENTS_DIR, student)
-        if not os.path.isdir(folder):
+    for student_dir in STUDENTS_DIR.iterdir():
+        if not student_dir.is_dir():
             continue
-        for fname in os.listdir(folder):
-            fpath = os.path.join(folder, fname)
-            img = cv2.imread(fpath)
+        roll_no = student_dir.name
+        for fpath in student_dir.iterdir():
+            if not fpath.is_file():
+                continue
+            img = cv2.imread(str(fpath))
             if img is None:
                 continue
             faces = app.get(img)
             if len(faces) == 0:
-                print(f"ERROR: No face found for {student} in {fname}")
+                print(f"ERROR: No face found for {roll_no} in {fpath.name}")
                 continue
             face = faces[0]
             emb = face.normed_embedding.astype("float32")
-            db.setdefault(student, []).append(emb)
+            db.setdefault(roll_no, []).append(emb)
     print(f"Loaded {sum(len(v) for v in db.values())} embeddings for {len(db)} students")
     return db
 
@@ -213,10 +223,43 @@ def cluster_candidates(candidates: List[dict], threshold: float) -> List[dict]:
     return clusters
 
 
+def load_student_lookup(session):
+    students = session.query(models.Student).all()
+    return {student.roll_no: student for student in students}
+
+
+def record_attendance(
+    session,
+    roll_no: str,
+    teacher_email: str,
+    confidence: float,
+    status: str,
+    student_id: Optional[int] = None,
+):
+    now = datetime.utcnow()
+    session.add(
+        models.Attendance(
+            student_id=student_id,
+            roll_no=roll_no,
+            date=now.date(),
+            status=status,
+            captured_at=now,
+            teacher_email=teacher_email,
+            confidence=confidence,
+        )
+    )
+
+
 # ------------------------------
 # Main pipeline
 # ------------------------------
-def run_once(app: FaceAnalysis, student_db: Dict[str, List[np.ndarray]]) -> None:
+def run_once(
+    app: FaceAnalysis,
+    student_db: Dict[str, List[np.ndarray]],
+    session,
+    teacher_email: str,
+    status: str = "present",
+):
     cap = cv2.VideoCapture(IP_CAMERA_VIDEO_URL)
     if not cap.isOpened():
         raise RuntimeError(f"Cannot open camera at {IP_CAMERA_VIDEO_URL}")
@@ -279,11 +322,91 @@ def run_once(app: FaceAnalysis, student_db: Dict[str, List[np.ndarray]]) -> None
         print("ERROR: No matches across detected faces")
         return
 
-    for name, meta in attendance.items():
-        print(f"SUCCESS: Marking attendance for {name} (max_sim={meta['max_sim']:.3f}, samples={meta['samples']})")
+    student_lookup = load_student_lookup(session)
+    saved = 0
+    records = []
+    missing_students = 0
+    for roll_no, meta in attendance.items():
+        student = student_lookup.get(roll_no)
+        if not student:
+            print(
+                f"WARNING: No student found with roll number {roll_no}; storing attendance with roll_no only"
+            )
+            missing_students += 1
+
+        record_attendance(
+            session=session,
+            roll_no=roll_no,
+            student_id=student.id if student else None,
+            teacher_email=teacher_email,
+            confidence=meta["max_sim"],
+            status=status,
+        )
+        saved += 1
+        records.append(
+            {
+                "roll_no": roll_no,
+                "student_id": student.id if student else None,
+                "confidence": meta["max_sim"],
+                "samples": meta["samples"],
+            }
+        )
+        print(
+            f"SUCCESS: Marked attendance for {roll_no} "
+            f"(max_sim={meta['max_sim']:.3f}, samples={meta['samples']})"
+        )
+
+    if saved:
+        session.commit()
+        print(f"INFO: Saved {saved} attendance record(s) to the database (missing students: {missing_students})")
+    return {"saved": saved, "records": records, "missing_students": missing_students}
+
+
+def run_pipeline(teacher_email: str, status: str = "present", session=None):
+    """Entry point for API callers to capture and store attendance.
+
+    Builds the face model, loads embeddings, runs detection once, and writes
+    recognized students to the database with teacher email and confidence.
+    """
+    own_session = False
+    if session is None:
+        session = SessionLocal()
+        own_session = True
+
+    # Ensure tables exist when running standalone (roll_no column is required).
+    models.Base.metadata.create_all(bind=session.get_bind())
+
+    try:
+        face_app = build_face_app()
+        student_db = load_student_db(face_app)
+        return run_once(
+            app=face_app,
+            student_db=student_db,
+            session=session,
+            teacher_email=teacher_email,
+            status=status,
+        )
+    finally:
+        if own_session:
+            session.close()
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Run attendance capture and store results")
+    parser.add_argument(
+        "--teacher-email",
+        help="Email ID of the teacher capturing attendance (for manual/debug runs)",
+    )
+    parser.add_argument(
+        "--status",
+        default="present",
+        help="Attendance status label to store (default: present)",
+    )
+    return parser.parse_args()
 
 
 if __name__ == "__main__":
-    face_app = build_face_app()
-    student_db = load_student_db(face_app)
-    run_once(face_app, student_db)
+    args = parse_args()
+    if not args.teacher_email:
+        raise SystemExit("--teacher-email is required when running manually")
+    run_pipeline(teacher_email=args.teacher_email, status=args.status)

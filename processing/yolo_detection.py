@@ -5,9 +5,6 @@ from ultralytics import YOLO
 import serial
 import time
 
-# =======================
-# CONFIG
-# =======================
 IP_CAM_URL_FILE = "ip_camera_url.txt"
 ZONES_FILE = "zones.json"
 MODEL_PATH = "yolov9e.pt"
