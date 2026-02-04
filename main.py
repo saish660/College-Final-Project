@@ -268,7 +268,12 @@ def get_attendance(student_id: int, db: Session = Depends(get_db)):
 @app.get("/attendance/roll/{roll_no}")
 def get_attendance_by_roll(roll_no: str, db: Session = Depends(get_db)):
     """Return attendance records using roll number (covers unregistered students)."""
-    return db.query(models.Attendance).filter(models.Attendance.roll_no == roll_no).all()
+    return (
+        db.query(models.Attendance)
+        .filter(models.Attendance.roll_no == roll_no)
+        .order_by(models.Attendance.date.desc(), models.Attendance.captured_at.desc())
+        .all()
+    )
 
 def _ensure_script_exists(path: Path, label: str) -> Path:
     script = path.expanduser().resolve()
