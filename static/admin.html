@@ -419,10 +419,7 @@
         <div>
           <div class="eyebrow">Smart Classroom Management System</div>
           <h1>Control Center</h1>
-          <p>
-            Authenticate on the left; manage zones and student images on the
-            right.
-          </p>
+          <p>Manage zones, students and teachers</p>
         </div>
         <a
           class="docs-button"
@@ -486,11 +483,9 @@
 
             <div class="card">
               <h3>Upload Student Images</h3>
-              <p>Saves under processing/students/&lt;folder&gt;/</p>
+              <p>Recommended 2 Images per student</p>
               <form id="uploadForm">
-                <label for="studentFolder"
-                  >Student folder (e.g., roll number or name)</label
-                >
+                <label for="studentFolder">CUIN of student</label>
                 <input
                   id="studentFolder"
                   name="studentFolder"
@@ -513,7 +508,9 @@
 
             <div class="card">
               <h3>Teacher Allowlist</h3>
-              <p>Only emails listed here can register as teachers.</p>
+              <p>
+                Only emails listed here can register as teachers on the app.
+              </p>
               <form id="allowlistForm">
                 <label for="allowlistEmail">Email to allow</label>
                 <input
@@ -854,6 +851,7 @@
       uploadForm.addEventListener("submit", async (e) => {
         e.preventDefault();
         const folder = document.getElementById("studentFolder").value.trim();
+
         const files = Array.from(
           document.getElementById("fileInput").files || [],
         );
@@ -877,6 +875,7 @@
         } catch (err) {
           setStatus(`Error: ${err.message}`);
         }
+        uploadForm.reset();
       });
     </script>
   </body>
