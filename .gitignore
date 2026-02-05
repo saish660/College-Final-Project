@@ -5,3 +5,5 @@ zones.json
 __pycache__/
 *.db
 ip_camera_url.txt
+processing/students/
+processing/embeddings/

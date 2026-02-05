@@ -503,7 +503,22 @@ async def upload_student_images(
     if not saved_paths:
         raise HTTPException(status_code=400, detail="No valid files uploaded")
 
+    try:
+        from processing import mark_attendance
+
+        face_app = mark_attendance.build_face_app()
+        embedding_info = mark_attendance.generate_embeddings_for_student(
+            roll_no=safe_folder,
+            app=face_app,
+        )
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=500, detail=f"Failed to generate embeddings: {exc}")
+
     return {
         "message": f"Uploaded {len(saved_paths)} file(s)",
         "paths": saved_paths,
+        "embeddings": {
+            "count": embedding_info["count"],
+            "path": str(Path(embedding_info["path"]).relative_to(PROJECT_ROOT)),
+        },
     }

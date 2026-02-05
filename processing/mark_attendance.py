@@ -42,6 +42,7 @@ IP_CAMERA_VIDEO_URL = load_ip_cam_url()
 
 
 STUDENTS_DIR = BASE_DIR / "students"
+EMBEDDINGS_DIR = BASE_DIR / "embeddings"
 FRAMES_PER_TRIGGER = 5           # capture 3–5 frames per button press
 MIN_FACE_SIZE = 40               # px (bare-minimum gate)
 LAPLACIAN_VAR_THRESHOLD = 20.0   # lower = blurrier (bare-minimum gate)
@@ -145,7 +146,34 @@ def align_face(image: np.ndarray, face) -> np.ndarray:
     return face_align.norm_crop(image, landmark=face.kps, image_size=112)
 
 
-def load_student_db(app: FaceAnalysis) -> Dict[str, List[np.ndarray]]:
+def _load_precomputed_embeddings() -> Dict[str, List[np.ndarray]]:
+    """Load saved embeddings from disk to avoid recomputing each run."""
+    db: Dict[str, List[np.ndarray]] = {}
+    if not EMBEDDINGS_DIR.is_dir():
+        return db
+
+    for npz_path in EMBEDDINGS_DIR.glob("*.npz"):
+        roll_no = npz_path.stem
+        try:
+            data = np.load(npz_path)
+            embs = data.get("embeddings")
+            if embs is None:
+                print(f"WARNING: Missing 'embeddings' key in {npz_path.name}; skipping")
+                continue
+            embs = np.asarray(embs, dtype="float32")
+            if embs.ndim == 1:
+                embs = embs.reshape(1, -1)
+            db[roll_no] = [emb for emb in embs]
+        except Exception as exc:  # noqa: BLE001
+            print(f"WARNING: Failed to load embeddings for {roll_no} from {npz_path.name}: {exc}")
+    if db:
+        total = sum(len(v) for v in db.values())
+        print(f"Loaded {total} precomputed embeddings for {len(db)} students from {EMBEDDINGS_DIR}")
+    return db
+
+
+def _load_student_db_from_images(app: FaceAnalysis) -> Dict[str, List[np.ndarray]]:
+    """Legacy path: compute embeddings directly from student images."""
     db: Dict[str, List[np.ndarray]] = {}
     for student_dir in STUDENTS_DIR.iterdir():
         if not student_dir.is_dir():
@@ -164,8 +192,18 @@ def load_student_db(app: FaceAnalysis) -> Dict[str, List[np.ndarray]]:
             face = faces[0]
             emb = face.normed_embedding.astype("float32")
             db.setdefault(roll_no, []).append(emb)
-    print(f"Loaded {sum(len(v) for v in db.values())} embeddings for {len(db)} students")
+    print(f"Loaded {sum(len(v) for v in db.values())} embeddings for {len(db)} students (computed from images)")
     return db
+
+
+def load_student_db(app: FaceAnalysis) -> Dict[str, List[np.ndarray]]:
+    """Load embeddings, preferring precomputed cache over on-the-fly computation."""
+    db = _load_precomputed_embeddings()
+    if db:
+        return db
+
+    print("No precomputed embeddings found; computing from student images")
+    return _load_student_db_from_images(app)
 
 
 def cosine_similarity_matrix(queries: np.ndarray, gallery: np.ndarray) -> np.ndarray:
@@ -252,6 +290,44 @@ def record_attendance(
             confidence=confidence,
         )
     )
+
+
+def generate_embeddings_for_student(roll_no: str, app: FaceAnalysis | None = None) -> dict:
+    """Compute and persist embeddings for a single student's folder."""
+    student_dir = STUDENTS_DIR / roll_no
+    if not student_dir.is_dir():
+        raise FileNotFoundError(f"Student folder not found: {student_dir}")
+
+    own_app = False
+    if app is None:
+        app = build_face_app()
+        own_app = True
+
+    embeddings: List[np.ndarray] = []
+    for fpath in sorted(student_dir.iterdir()):
+        if not fpath.is_file():
+            continue
+        img = cv2.imread(str(fpath))
+        if img is None:
+            print(f"WARNING: Could not read image {fpath.name} for {roll_no}; skipping")
+            continue
+        faces = app.get(img)
+        if not faces:
+            print(f"WARNING: No face detected in {fpath.name} for {roll_no}; skipping")
+            continue
+        embeddings.append(faces[0].normed_embedding.astype("float32"))
+
+    if own_app:
+        app = None
+
+    if not embeddings:
+        raise ValueError(f"No embeddings generated for {roll_no}; ensure images contain faces")
+
+    EMBEDDINGS_DIR.mkdir(parents=True, exist_ok=True)
+    out_path = EMBEDDINGS_DIR / f"{roll_no}.npz"
+    np.savez_compressed(out_path, embeddings=np.stack(embeddings, axis=0))
+    print(f"Saved {len(embeddings)} embeddings for {roll_no} -> {out_path}")
+    return {"count": len(embeddings), "path": out_path}
 
 
 # ------------------------------
