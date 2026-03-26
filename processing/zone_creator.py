@@ -49,7 +49,6 @@ def capture_frame(width, height):
         messagebox.showerror("Error", "Failed to read frame from IP camera")
         return None
 
-    frame = cv2.resize(frame, (width, height))
     return cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
 
@@ -62,20 +61,23 @@ root.title("Zone Creation Tool")
 # Make fullscreen
 root.attributes("-fullscreen", True)
 
-# Get screen size
+# Get screen size (kept for potential future use but not used to resize the frame)
 SCREEN_WIDTH = root.winfo_screenwidth()
 SCREEN_HEIGHT = root.winfo_screenheight()
 
-# Capture frame according to fullscreen resolution
+# Capture frame at native camera resolution (no resizing)
 frame = capture_frame(SCREEN_WIDTH, SCREEN_HEIGHT)
 if frame is None:
     exit()
 
 frame_img = Image.fromarray(frame)
 
-# Create Canvas the size of the full screen
-canvas = tk.Canvas(root, width=SCREEN_WIDTH, height=SCREEN_HEIGHT)
-canvas.pack(fill="both", expand=True)
+# Use native frame dimensions for the drawing surface to avoid coordinate scaling
+FRAME_HEIGHT, FRAME_WIDTH = frame.shape[:2]
+
+# Create Canvas sized to the frame; do not stretch to full screen
+canvas = tk.Canvas(root, width=FRAME_WIDTH, height=FRAME_HEIGHT)
+canvas.pack()
 
 # Convert image and display it
 tk_frame = ImageTk.PhotoImage(frame_img)
